@@ -1,6 +1,6 @@
 # Site settings
 title: Wastland of Time
-SEOTitle: 时间的荒原上 | Wastland of Time
+SEOTitle: 『时间的荒原上』Wastland of Time
 header-img: img/post-bg-desk.jpg
 email: lijiren6495ed@gmail.com
 description: "琴奏龙门之绿桐，玉壶美酒清若空。"
@@ -99,12 +99,6 @@ service-worker: true
 # Friends
 friends: [
     {
-        title: "WY",
-        href: "http://zhengwuyang.com"
-    },{
-        title: "简书·BY",
-        href: "http://www.jianshu.com/u/e71990ada2fd"
-    },{
         title: "Apple",
         href: "https://apple.com"
     },{
