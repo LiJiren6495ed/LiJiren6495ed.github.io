@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JS Raycasting Engine</title>
+    <style>
+        body {
+            margin: 0;
+            background: #1a1a1a;
+            color: #eee;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden;
+        }
+        .header {
+            margin: 10px;
+            text-align: center;
+        }
+        .container {
+            display: flex;
+            gap: 10px;
+            background: #333;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        canvas {
+            background: #000;
+            image-rendering: pixelated;
+        }
+        .controls {
+            margin-top: 15px;
+            font-size: 0.9em;
+            color: #aaa;
+        }
+        kbd {
+            background: #555;
+            padding: 2px 5px;
+            border-radius: 3px;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>JS Raycasting Engine</h2>
+        <p>基于原生 JavaScript 的伪 3D 渲染引擎</p>
+    </div>
+
+    <div class="container">
+        <!-- 2D 俯视地图画布 -->
+        <canvas id="mapCanvas" width="300" height="300"></canvas>
+        <!-- 3D 投影画面画布 -->
+        <canvas id="viewCanvas" width="400" height="300"></canvas>
+    </div>
+
+    <div class="controls">
+        控制：<kbd>W</kbd> <kbd>S</kbd> 移动，<kbd>A</kbd> <kbd>D</kbd> 旋转
+    </div>
+
+    <!-- 关键点：在这里引入外部 JS 文件 -->
+    <script src="raycaster.js"></script>
+</body>
+</html>
