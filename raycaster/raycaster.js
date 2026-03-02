@@ -47,8 +47,8 @@ function update() {
     if (keys.d) player.angle += 0.05;
 
     let moveStep = 0;
-    if (keys.w) moveStep = 2.5;
-    if (keys.s) moveStep = -2.5;
+    if (keys.w) moveStep = 1.5;
+    if (keys.s) moveStep = -1.5;
 
     const newX = player.x + Math.cos(player.angle) * moveStep;
     const newY = player.y + Math.sin(player.angle) * moveStep;
