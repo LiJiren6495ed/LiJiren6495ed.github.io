@@ -43,12 +43,12 @@ document.addEventListener('keyup', (e) => {
 
 // --- 4. 逻辑更新 ---
 function update() {
-    if (keys.a) player.angle -= 0.05;
-    if (keys.d) player.angle += 0.05;
+    if (keys.a) player.angle -= 0.02;
+    if (keys.d) player.angle += 0.02;
 
     let moveStep = 0;
-    if (keys.w) moveStep = 1.5;
-    if (keys.s) moveStep = -1.5;
+    if (keys.w) moveStep = 0.5;
+    if (keys.s) moveStep = -0.5;
 
     const newX = player.x + Math.cos(player.angle) * moveStep;
     const newY = player.y + Math.sin(player.angle) * moveStep;
