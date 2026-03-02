@@ -11,31 +11,42 @@ if (!mapCanvas || !viewCanvas) {
     const vCtx = viewCanvas.getContext('2d');
 
     // --- 配置参数 ---
-    const mapSize = 30; // 进一步增加尺寸，让迷宫更大
+    const mapSize = 20; 
     const cellSize = 30;
     const rotationSensitivity = 0.02; 
     const movementSpeed = 0.5; 
     
     let gameWon = false;
 
-    // --- 迷宫生成算法 (递归回溯) ---
+    // --- 改进的迷宫生成算法 ---
     function generateMaze(size) {
+        // 初始化：奇数行奇数列的点作为“种子”
         let maze = Array.from({ length: size }, () => Array(size).fill(1));
         
         function carve(x, y) {
+            // 随机化移动方向
             const dirs = [[0, -2], [0, 2], [-2, 0], [2, 0]].sort(() => Math.random() - 0.5);
             maze[y][x] = 0; 
 
             for (let [dx, dy] of dirs) {
                 let nx = x + dx, ny = y + dy;
+                // 确保在边界内且目标点是墙
                 if (nx > 0 && nx < size - 1 && ny > 0 && ny < size - 1 && maze[ny][nx] === 1) {
-                    maze[y + dy / 2][x + dx / 2] = 0; 
+                    maze[y + dy / 2][x + dx / 2] = 0; // 打通中间的墙
                     carve(nx, ny);
                 }
             }
         }
 
         carve(1, 1);
+        
+        // 增加额外的随机打通，减少出现尴尬形状的概率
+        for (let i = 0; i < 10; i++) {
+            let rx = Math.floor(Math.random() * (size - 2)) + 1;
+            let ry = Math.floor(Math.random() * (size - 2)) + 1;
+            if (maze[ry][rx] === 1) maze[ry][rx] = 0;
+        }
+
         maze[size - 2][size - 2] = 0; // 确保终点是通的
         return maze;
     }
@@ -91,68 +102,49 @@ if (!mapCanvas || !viewCanvas) {
     }
 
     function draw() {
-        // --- 绘制 2D 小地图 (跟随玩家) ---
-        mCtx.fillStyle = '#111';
+        // --- 绘制 2D 小地图 ---
+        mCtx.fillStyle = '#050505'; // 更深的底色，遮盖边缘黑块
         mCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
 
-        mCtx.save(); // 保存当前状态
-        // 将画布中心平移到玩家位置，并反向移动地图，实现地图跟随效果
+        mCtx.save(); 
         mCtx.translate(mapCanvas.width / 2 - player.x, mapCanvas.height / 2 - player.y);
 
-        // 绘制地图格子
+        // 绘制迷宫主体
         for (let r = 0; r < mapSize; r++) {
             for (let c = 0; c < mapSize; c++) {
                 if (worldMap[r][c] === 1) {
-                    mCtx.fillStyle = '#555';
-                    mCtx.fillRect(c * cellSize, r * cellSize, cellSize - 1, cellSize - 1);
+                    mCtx.fillStyle = '#3a3a3a'; // 墙体颜色
+                    mCtx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+                } else {
+                    mCtx.fillStyle = '#1a1a1a'; // 道路颜色
+                    mCtx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
                 }
             }
         }
 
-        // 绘制终点
+        // 绘制终点标志 (发光的绿点)
         mCtx.fillStyle = '#0f0';
+        mCtx.shadowBlur = 10;
+        mCtx.shadowColor = '#0f0';
         mCtx.fillRect(goal.x - 8, goal.y - 8, 16, 16);
+        mCtx.shadowBlur = 0;
 
-        // 绘制射线 (仅在 2D 地图显示)
-        const numRays = viewCanvas.width;
-        const rayStep = player.fov / numRays;
-
-        for (let i = 0; i < numRays; i += 20) { // 每隔20条画一条，减少混乱
-            const rayAngle = player.angle - (player.fov / 2) + (i * rayStep);
-            let rayX = player.x;
-            let rayY = player.y;
-            const cosA = Math.cos(rayAngle);
-            const sinA = Math.sin(rayAngle);
-            let dist = 0;
-            while(dist < 200) { // 2D 射线长度限制，避免过长
-                dist += 2;
-                let nx = rayX + cosA * dist;
-                let ny = rayY + sinA * dist;
-                if (worldMap[Math.floor(ny/cellSize)][Math.floor(nx/cellSize)] === 1) break;
-                mCtx.strokeStyle = 'rgba(0, 255, 0, 0.1)';
-                mCtx.beginPath(); mCtx.moveTo(player.x, player.y); mCtx.lineTo(nx, ny); mCtx.stroke();
-            }
-        }
-
-        // 绘制玩家图标 (始终在平移后的中心)
+        // 绘制玩家
         mCtx.fillStyle = '#ff0000';
         mCtx.beginPath();
         mCtx.arc(player.x, player.y, 5, 0, Math.PI * 2);
         mCtx.fill();
-        // 绘制视线方向
-        mCtx.strokeStyle = '#ff0';
-        mCtx.beginPath();
-        mCtx.moveTo(player.x, player.y);
-        mCtx.lineTo(player.x + Math.cos(player.angle) * 15, player.y + Math.sin(player.angle) * 15);
-        mCtx.stroke();
 
-        mCtx.restore(); // 恢复状态
+        mCtx.restore(); 
 
         // --- 绘制 3D 视野 ---
-        vCtx.fillStyle = '#111'; // 天空
+        vCtx.fillStyle = '#0a0a0a'; // 顶部天空
         vCtx.fillRect(0, 0, viewCanvas.width, viewCanvas.height / 2);
-        vCtx.fillStyle = '#222'; // 地面
+        vCtx.fillStyle = '#151515'; // 底部地面
         vCtx.fillRect(0, viewCanvas.height / 2, viewCanvas.width, viewCanvas.height / 2);
+
+        const numRays = viewCanvas.width;
+        const rayStep = player.fov / numRays;
 
         for (let i = 0; i < numRays; i++) {
             const rayAngle = player.angle - (player.fov / 2) + (i * rayStep);
@@ -179,25 +171,34 @@ if (!mapCanvas || !viewCanvas) {
 
             const correctedDist = distance * Math.cos(rayAngle - player.angle);
             const wallHeight = (cellSize * 350) / Math.max(correctedDist, 1);
-            const brightness = Math.min(255, 255 * (1 - correctedDist / 600));
             
+            // 基础亮度
+            let brightness = Math.min(255, 255 * (1 - correctedDist / 600));
+            
+            // 区分横墙和纵墙（简单阴影效果）
+            const hitX = rayX % cellSize;
+            const hitY = rayY % cellSize;
+            if (Math.abs(hitX) < 1 || Math.abs(hitX - cellSize) < 1) {
+                brightness *= 0.7; // 侧面墙壁稍微暗一点，增加立体感
+            }
+
             const isGoalArea = Math.floor(rayX/cellSize) === mapSize-2 && Math.floor(rayY/cellSize) === mapSize-2;
             vCtx.fillStyle = isGoalArea 
                 ? `rgb(0, ${brightness}, 0)` 
-                : `rgb(${brightness}, ${brightness * 0.8}, ${brightness * 0.5})`;
+                : `rgb(${brightness}, ${brightness * 0.9}, ${brightness * 0.7})`;
             
             vCtx.fillRect(i, (viewCanvas.height - wallHeight) / 2, 1, wallHeight);
         }
 
         if (gameWon) {
-            vCtx.fillStyle = "rgba(0, 0, 0, 0.8)";
+            vCtx.fillStyle = "rgba(0, 0, 0, 0.85)";
             vCtx.fillRect(0, 0, viewCanvas.width, viewCanvas.height);
             vCtx.fillStyle = "#0f0";
-            vCtx.font = "bold 30px Arial";
+            vCtx.font = "bold 24px 'Microsoft YaHei'";
             vCtx.textAlign = "center";
-            vCtx.fillText("🎉 成功逃离迷宫！", viewCanvas.width / 2, viewCanvas.height / 2);
-            vCtx.font = "16px Arial";
-            vCtx.fillText("按 F5 刷新重新开始挑战", viewCanvas.width / 2, viewCanvas.height / 2 + 40);
+            vCtx.fillText("🎉 逃出生天！", viewCanvas.width / 2, viewCanvas.height / 2);
+            vCtx.font = "14px 'Microsoft YaHei'";
+            vCtx.fillText("按下 F5 键再次进入循环", viewCanvas.width / 2, viewCanvas.height / 2 + 40);
         }
     }
 
