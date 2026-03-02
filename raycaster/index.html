@@ -55,8 +55,6 @@
 </head>
 <body>
 
-    <div id="js-error-msg">⚠️ 引擎核心文件 (raycaster.js) 加载失败，请检查文件名和路径。</div>
-
     <div class="header">
         <h2>JS Raycasting Engine</h2>
         <p>基于原生 JavaScript 的伪 3D 渲染引擎</p>
@@ -71,16 +69,6 @@
         控制：<kbd>W</kbd> <kbd>S</kbd> 移动，<kbd>A</kbd> <kbd>D</kbd> 旋转
     </div>
 
-    <script>
-        // 在尝试加载外部 JS 之前，先设个定时器
-        // 如果 2 秒后 raycaster.js 还没给回应，就显示错误
-        window.jsLoaded = false;
-        setTimeout(() => {
-            if (!window.jsLoaded) {
-                document.getElementById('js-error-msg').style.display = 'block';
-            }
-        }, 2000);
-    </script>
     <script src="raycaster.js"></script>
 </body>
 </html>
