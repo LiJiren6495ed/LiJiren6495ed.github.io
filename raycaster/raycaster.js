@@ -13,8 +13,8 @@ if (!mapCanvas || !viewCanvas) {
     // --- 配置参数 ---
     const mapSize = 21; 
     const cellSize = 30;
-    const rotationSensitivity = 0.04; // 恢复到较舒适的灵敏度
-    const movementSpeed = 1.5; // 恢复到较舒适的移动速度
+    const rotationSensitivity = 0.01; // 恢复到较舒适的灵敏度
+    const movementSpeed = 0.3; // 恢复到较舒适的移动速度
     
     let gameWon = false;
     let tick = 0; // 用于动画效果
