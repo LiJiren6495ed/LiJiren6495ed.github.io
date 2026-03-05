@@ -10,14 +10,18 @@ if (!mapCanvas || !viewCanvas) {
     const mCtx = mapCanvas.getContext('2d');
     const vCtx = viewCanvas.getContext('2d');
 
-    // --- 配置参数 ---
+    // --- 配置参数 (按照要求调整) ---
     const mapSize = 21; 
     const cellSize = 30;
-    const rotationSensitivity = 0.01; // 恢复到较舒适的灵敏度
-    const movementSpeed = 0.3; // 恢复到较舒适的移动速度
+    const rotationSensitivity = 0.01; // 极低灵敏度，增加操控精准感
+    const movementSpeed = 0.3;     // 慢速移动，消除滑行感
     
     let gameWon = false;
-    let tick = 0; // 用于动画效果
+    let tick = 0; 
+    
+    // 镜头晃动相关变量
+    let walkPhase = 0;    // 走路的相位（弧度）
+    let bobOffset = 0;    // 当前垂直偏移量
 
     // --- 改进的迷宫生成算法 ---
     function generateMaze(size) {
@@ -87,7 +91,7 @@ if (!mapCanvas || !viewCanvas) {
 
     function update() {
         if (gameWon) return;
-        tick++; // 增加动画计数
+        tick++; 
 
         if (keys.a) player.angle -= rotationSensitivity;
         if (keys.d) player.angle += rotationSensitivity;
@@ -96,23 +100,29 @@ if (!mapCanvas || !viewCanvas) {
         if (keys.w) moveStep = movementSpeed;
         if (keys.s) moveStep = -movementSpeed;
 
-        const newX = player.x + Math.cos(player.angle) * moveStep;
-        const newY = player.y + Math.sin(player.angle) * moveStep;
+        if (moveStep !== 0) {
+            const newX = player.x + Math.cos(player.angle) * moveStep;
+            const newY = player.y + Math.sin(player.angle) * moveStep;
 
-        const gridX = Math.floor(newX / cellSize);
-        const gridY = Math.floor(newY / cellSize);
-        
-        if (gridY >= 0 && gridY < mapSize && gridX >= 0 && gridX < mapSize) {
-            if (worldMap[gridY][gridX] === 0) {
-                player.x = newX;
-                player.y = newY;
+            const gridX = Math.floor(newX / cellSize);
+            const gridY = Math.floor(newY / cellSize);
+            
+            if (gridY >= 0 && gridY < mapSize && gridX >= 0 && gridX < mapSize) {
+                if (worldMap[gridY][gridX] === 0) {
+                    player.x = newX;
+                    player.y = newY;
+                }
             }
+            
+            // 走路时增加镜头起伏相位
+            walkPhase += 0.12; 
+        } else {
+            // 不走路时，缓慢归位
+            walkPhase *= 0.9; 
         }
-
-        const distToGoal = Math.sqrt((player.x - goal.x)**2 + (player.y - goal.y)**2);
-        if (distToGoal < cellSize / 2) {
-            gameWon = true;
-        }
+        
+        // 计算呼吸/行走起伏（正弦波）
+        bobOffset = Math.sin(walkPhase) * 6; // 6像素的起伏强度
     }
 
     function draw() {
@@ -134,7 +144,6 @@ if (!mapCanvas || !viewCanvas) {
             }
         }
 
-        // 终点标记增加呼吸灯效果
         const goalAlpha = 0.5 + Math.sin(tick * 0.1) * 0.5;
         mCtx.fillStyle = `rgba(0, 255, 0, ${goalAlpha})`;
         mCtx.shadowBlur = 15;
@@ -148,11 +157,11 @@ if (!mapCanvas || !viewCanvas) {
         mCtx.fill();
         mCtx.restore(); 
 
-        // --- 3D 渲染 ---
+        // --- 3D 渲染 (加入镜头晃动 bobOffset) ---
         vCtx.fillStyle = '#0a0a0a'; 
-        vCtx.fillRect(0, 0, viewCanvas.width, viewCanvas.height / 2);
+        vCtx.fillRect(0, 0, viewCanvas.width, viewCanvas.height / 2 + bobOffset); // 连带天空一起偏移
         vCtx.fillStyle = '#151515'; 
-        vCtx.fillRect(0, viewCanvas.height / 2, viewCanvas.width, viewCanvas.height / 2);
+        vCtx.fillRect(0, viewCanvas.height / 2 + bobOffset, viewCanvas.width, viewCanvas.height / 2 - bobOffset);
 
         const numRays = viewCanvas.width;
         const rayStep = player.fov / numRays;
@@ -176,7 +185,6 @@ if (!mapCanvas || !viewCanvas) {
                 const mapY = Math.floor(rayY / cellSize);
                 
                 if (mapY >= 0 && mapY < mapSize && mapX >= 0 && mapX < mapSize) {
-                    // 如果射线碰到了终点格子
                     if (mapX === goal.gridX && mapY === goal.gridY) {
                         hitGoal = true;
                         hitWall = true;
@@ -193,7 +201,6 @@ if (!mapCanvas || !viewCanvas) {
             let brightness = Math.min(255, 255 * (1 - correctedDist / 600));
             
             if (hitGoal) {
-                // 终点在 3D 中的表现：亮绿色 + 呼吸效果
                 const pulse = Math.sin(tick * 0.1) * 30;
                 vCtx.fillStyle = `rgb(0, ${Math.min(255, brightness + 100 + pulse)}, 0)`;
             } else {
@@ -204,7 +211,8 @@ if (!mapCanvas || !viewCanvas) {
                 vCtx.fillStyle = `rgb(${brightness}, ${brightness * 0.9}, ${brightness * 0.7})`;
             }
             
-            vCtx.fillRect(i, (viewCanvas.height - wallHeight) / 2, 1, wallHeight);
+            // 在绘制墙壁矩形时，垂直中心加入 bobOffset
+            vCtx.fillRect(i, (viewCanvas.height - wallHeight) / 2 + bobOffset, 1, wallHeight);
         }
 
         if (gameWon) {
