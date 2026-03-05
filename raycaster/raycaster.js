@@ -10,7 +10,7 @@ if (!mapCanvas || !viewCanvas) {
     const mCtx = mapCanvas.getContext('2d');
     const vCtx = viewCanvas.getContext('2d');
 
-    // --- 配置参数 (按照要求调整) ---
+    // --- 配置参数 ---
     const mapSize = 21; 
     const cellSize = 30;
     const rotationSensitivity = 0.01; 
@@ -19,18 +19,15 @@ if (!mapCanvas || !viewCanvas) {
     let gameWon = false;
     let tick = 0; 
     
-    // 镜头晃动相关变量
     let walkPhase = 0;    
     let bobOffset = 0;    
 
-    // --- 改进的迷宫生成算法 ---
+    // --- 迷宫生成 ---
     function generateMaze(size) {
         let maze = Array.from({ length: size }, () => Array(size).fill(1));
-        
         function carve(x, y) {
             const dirs = [[0, -2], [0, 2], [-2, 0], [2, 0]].sort(() => Math.random() - 0.5);
             maze[y][x] = 0; 
-
             for (let [dx, dy] of dirs) {
                 let nx = x + dx, ny = y + dy;
                 if (nx > 0 && nx < size - 1 && ny > 0 && ny < size - 1 && maze[ny][nx] === 1) {
@@ -39,27 +36,18 @@ if (!mapCanvas || !viewCanvas) {
                 }
             }
         }
-
         carve(1, 1);
-        
         const gx = size - 2;
         const gy = size - 2;
         maze[gy][gx] = 0; 
-
         if (maze[gy - 1][gx] === 1 && maze[gy][gx - 1] === 1) {
-            if (Math.random() > 0.5) {
-                maze[gy - 1][gx] = 0; 
-            } else {
-                maze[gy][gx - 1] = 0; 
-            }
+            if (Math.random() > 0.5) maze[gy - 1][gx] = 0; else maze[gy][gx - 1] = 0;
         }
-
         for (let i = 0; i < 15; i++) {
             let rx = Math.floor(Math.random() * (size - 2)) + 1;
             let ry = Math.floor(Math.random() * (size - 2)) + 1;
             maze[ry][rx] = 0;
         }
-
         return maze;
     }
 
@@ -67,11 +55,10 @@ if (!mapCanvas || !viewCanvas) {
     const goal = { 
         gridX: mapSize - 2, 
         gridY: mapSize - 2,
-        x: (mapSize - 2) * cellSize + cellSize / 2, 
-        y: (mapSize - 2) * cellSize + cellSize / 2 
+        centerX: (mapSize - 2) * cellSize + cellSize / 2, 
+        centerY: (mapSize - 2) * cellSize + cellSize / 2 
     };
 
-    // --- 玩家初始状态 ---
     const player = {
         x: cellSize * 1.5,
         y: cellSize * 1.5,
@@ -80,14 +67,8 @@ if (!mapCanvas || !viewCanvas) {
     };
 
     const keys = { w: false, s: false, a: false, d: false };
-    document.addEventListener('keydown', (e) => {
-        const key = e.key.toLowerCase();
-        if (keys.hasOwnProperty(key)) keys[key] = true;
-    });
-    document.addEventListener('keyup', (e) => {
-        const key = e.key.toLowerCase();
-        if (keys.hasOwnProperty(key)) keys[key] = false;
-    });
+    document.addEventListener('keydown', (e) => { if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true; });
+    document.addEventListener('keyup', (e) => { if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false; });
 
     function update() {
         if (gameWon) return;
@@ -101,44 +82,42 @@ if (!mapCanvas || !viewCanvas) {
         if (keys.s) moveStep = -movementSpeed;
 
         if (moveStep !== 0) {
-            const newX = player.x + Math.cos(player.angle) * moveStep;
-            const newY = player.y + Math.sin(player.angle) * moveStep;
+            const nextX = player.x + Math.cos(player.angle) * moveStep;
+            const nextY = player.y + Math.sin(player.angle) * moveStep;
 
-            const gridX = Math.floor(newX / cellSize);
-            const gridY = Math.floor(newY / cellSize);
+            const gX = Math.floor(nextX / cellSize);
+            const gY = Math.floor(nextY / cellSize);
             
-            if (gridY >= 0 && gridY < mapSize && gridX >= 0 && gridX < mapSize) {
-                if (worldMap[gridY][gridX] === 0) {
-                    player.x = newX;
-                    player.y = newY;
+            // 碰撞检测核心：允许进入 0 (走廊) 或者刚好是终点格子
+            if (gY >= 0 && gY < mapSize && gX >= 0 && gX < mapSize) {
+                if (worldMap[gY][gX] === 0 || (gX === goal.gridX && gY === goal.gridY)) {
+                    player.x = nextX;
+                    player.y = nextY;
                 }
             }
-            
-            // 调整步伐频率，让步伐更慢
             walkPhase += 0.06; 
         } else {
-            walkPhase *= 0.9; 
+            walkPhase *= 0.1; 
         }
         
         bobOffset = Math.sin(walkPhase) * 6; 
 
-        // --- 修复：更鲁棒的胜利检测 ---
-        // 只要玩家当前的格子坐标等于终点的格子坐标，即视为通关
-        const currentPlayerGridX = Math.floor(player.x / cellSize);
-        const currentPlayerGridY = Math.floor(player.y / cellSize);
+        // 判定检测：只要玩家坐标进入了终点所在的 30x30 格子范围内就判定胜利
+        const pGridX = Math.floor(player.x / cellSize);
+        const pGridY = Math.floor(player.y / cellSize);
         
-        if (currentPlayerGridX === goal.gridX && currentPlayerGridY === goal.gridY) {
+        if (pGridX === goal.gridX && pGridY === goal.gridY) {
             gameWon = true;
+            console.log("Victory triggered!");
         }
     }
 
     function draw() {
+        // --- 2D 地图 ---
         mCtx.fillStyle = '#050505'; 
         mCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
-
         mCtx.save(); 
         mCtx.translate(mapCanvas.width / 2 - player.x, mapCanvas.height / 2 - player.y);
-
         for (let r = 0; r < mapSize; r++) {
             for (let c = 0; c < mapSize; c++) {
                 if (worldMap[r][c] === 1) {
@@ -150,20 +129,19 @@ if (!mapCanvas || !viewCanvas) {
                 }
             }
         }
-
         const goalAlpha = 0.5 + Math.sin(tick * 0.1) * 0.5;
         mCtx.fillStyle = `rgba(0, 255, 0, ${goalAlpha})`;
         mCtx.shadowBlur = 15;
         mCtx.shadowColor = '#0f0';
-        mCtx.fillRect(goal.x - 8, goal.y - 8, 16, 16);
+        mCtx.fillRect(goal.centerX - 10, goal.centerY - 10, 20, 20);
         mCtx.shadowBlur = 0;
-
         mCtx.fillStyle = '#ff0000';
         mCtx.beginPath();
         mCtx.arc(player.x, player.y, 5, 0, Math.PI * 2);
         mCtx.fill();
         mCtx.restore(); 
 
+        // --- 3D 渲染 ---
         vCtx.fillStyle = '#0a0a0a'; 
         vCtx.fillRect(0, 0, viewCanvas.width, viewCanvas.height / 2 + bobOffset); 
         vCtx.fillStyle = '#151515'; 
@@ -189,7 +167,6 @@ if (!mapCanvas || !viewCanvas) {
                 distance += stepSize;
                 const mapX = Math.floor(rayX / cellSize);
                 const mapY = Math.floor(rayY / cellSize);
-                
                 if (mapY >= 0 && mapY < mapSize && mapX >= 0 && mapX < mapSize) {
                     if (mapX === goal.gridX && mapY === goal.gridY) {
                         hitGoal = true;
@@ -197,9 +174,7 @@ if (!mapCanvas || !viewCanvas) {
                     } else if (worldMap[mapY][mapX] === 1) {
                         hitWall = true;
                     }
-                } else {
-                    hitWall = true;
-                }
+                } else { hitWall = true; }
             }
 
             const correctedDist = distance * Math.cos(rayAngle - player.angle);
@@ -211,12 +186,9 @@ if (!mapCanvas || !viewCanvas) {
                 vCtx.fillStyle = `rgb(0, ${Math.min(255, brightness + 100 + pulse)}, 0)`;
             } else {
                 const hitX = rayX % cellSize;
-                if (Math.abs(hitX) < 1 || Math.abs(hitX - cellSize) < 1) {
-                    brightness *= 0.7; 
-                }
+                if (Math.abs(hitX) < 1 || Math.abs(hitX - cellSize) < 1) brightness *= 0.7; 
                 vCtx.fillStyle = `rgb(${brightness}, ${brightness * 0.9}, ${brightness * 0.7})`;
             }
-            
             vCtx.fillRect(i, (viewCanvas.height - wallHeight) / 2 + bobOffset, 1, wallHeight);
         }
 
@@ -224,10 +196,10 @@ if (!mapCanvas || !viewCanvas) {
             vCtx.fillStyle = "rgba(0, 0, 0, 0.85)";
             vCtx.fillRect(0, 0, viewCanvas.width, viewCanvas.height);
             vCtx.fillStyle = "#0f0";
-            vCtx.font = "bold 24px 'Microsoft YaHei'";
+            vCtx.font = "bold 24px sans-serif";
             vCtx.textAlign = "center";
             vCtx.fillText("🎉 逃出生天！", viewCanvas.width / 2, viewCanvas.height / 2);
-            vCtx.font = "14px 'Microsoft YaHei'";
+            vCtx.font = "14px sans-serif";
             vCtx.fillText("按下 F5 键再次进入循环", viewCanvas.width / 2, viewCanvas.height / 2 + 40);
         }
     }
