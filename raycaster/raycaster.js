@@ -13,15 +13,15 @@ if (!mapCanvas || !viewCanvas) {
     // --- 配置参数 (按照要求调整) ---
     const mapSize = 21; 
     const cellSize = 30;
-    const rotationSensitivity = 0.01; // 极低灵敏度，增加操控精准感
-    const movementSpeed = 0.3;     // 慢速移动，消除滑行感
+    const rotationSensitivity = 0.01; 
+    const movementSpeed = 0.3;     
     
     let gameWon = false;
     let tick = 0; 
     
     // 镜头晃动相关变量
-    let walkPhase = 0;    // 走路的相位（弧度）
-    let bobOffset = 0;    // 当前垂直偏移量
+    let walkPhase = 0;    
+    let bobOffset = 0;    
 
     // --- 改进的迷宫生成算法 ---
     function generateMaze(size) {
@@ -114,15 +114,22 @@ if (!mapCanvas || !viewCanvas) {
                 }
             }
             
-            // 走路时增加镜头起伏相位
+            // 调整步伐频率，让步伐更慢
             walkPhase += 0.06; 
         } else {
-            // 不走路时，缓慢归位
             walkPhase *= 0.9; 
         }
         
-        // 计算呼吸/行走起伏（正弦波）
-        bobOffset = Math.sin(walkPhase) * 6; // 6像素的起伏强度
+        bobOffset = Math.sin(walkPhase) * 6; 
+
+        // --- 修复：更鲁棒的胜利检测 ---
+        // 只要玩家当前的格子坐标等于终点的格子坐标，即视为通关
+        const currentPlayerGridX = Math.floor(player.x / cellSize);
+        const currentPlayerGridY = Math.floor(player.y / cellSize);
+        
+        if (currentPlayerGridX === goal.gridX && currentPlayerGridY === goal.gridY) {
+            gameWon = true;
+        }
     }
 
     function draw() {
@@ -157,9 +164,8 @@ if (!mapCanvas || !viewCanvas) {
         mCtx.fill();
         mCtx.restore(); 
 
-        // --- 3D 渲染 (加入镜头晃动 bobOffset) ---
         vCtx.fillStyle = '#0a0a0a'; 
-        vCtx.fillRect(0, 0, viewCanvas.width, viewCanvas.height / 2 + bobOffset); // 连带天空一起偏移
+        vCtx.fillRect(0, 0, viewCanvas.width, viewCanvas.height / 2 + bobOffset); 
         vCtx.fillStyle = '#151515'; 
         vCtx.fillRect(0, viewCanvas.height / 2 + bobOffset, viewCanvas.width, viewCanvas.height / 2 - bobOffset);
 
@@ -211,7 +217,6 @@ if (!mapCanvas || !viewCanvas) {
                 vCtx.fillStyle = `rgb(${brightness}, ${brightness * 0.9}, ${brightness * 0.7})`;
             }
             
-            // 在绘制墙壁矩形时，垂直中心加入 bobOffset
             vCtx.fillRect(i, (viewCanvas.height - wallHeight) / 2 + bobOffset, 1, wallHeight);
         }
 
