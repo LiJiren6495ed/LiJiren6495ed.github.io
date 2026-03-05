@@ -115,7 +115,7 @@ if (!mapCanvas || !viewCanvas) {
             }
             
             // 走路时增加镜头起伏相位
-            walkPhase += 0.12; 
+            walkPhase += 0.06; 
         } else {
             // 不走路时，缓慢归位
             walkPhase *= 0.9; 
